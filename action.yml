@@ -8,12 +8,12 @@ inputs:
     required: true
   github_token:
     description: GitHub token with PR read/write access
-    required: true
+    required: false
     default: ${{ github.token }}
   model:
     description: LLM model for aider to use
     required: false
-    default: openai/morph-minimax3-428b
+    default: morph/morph-minimax3-428b
 
 runs:
   using: composite
@@ -28,6 +28,13 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: ${{ runner.os }}-pip-
 
     - name: Install dependencies
       shell: bash
