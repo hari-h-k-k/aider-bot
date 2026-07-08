@@ -14,14 +14,28 @@ inputs:
     description: LLM model for aider to use
     required: false
     default: morph/morph-minimax3-428b
+  comment_body:
+    description: The issue comment body that triggered the action
+    required: true
 
 runs:
   using: composite
   steps:
+    - name: Get PR branch
+      id: pr
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        branch=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+          https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }} \
+          | python3 -c "import sys,json; print(json.load(sys.stdin)['head']['ref'])")
+        echo "branch=$branch" >> $GITHUB_OUTPUT
+
     - name: Checkout PR branch
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.pull_request.head.ref }}
+        ref: ${{ steps.pr.outputs.branch }}
         fetch-depth: 0
 
     - name: Set up Python
@@ -45,8 +59,9 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
-        PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        PR_NUMBER: ${{ github.event.issue.number }}
+        PR_BRANCH: ${{ steps.pr.outputs.branch }}
+        COMMENT_BODY: ${{ inputs.comment_body }}
         AIDER_MODEL: ${{ inputs.model }}
         OPENAI_API_KEY: ${{ inputs.morph_api_key }}
         OPENAI_API_BASE: https://api.morphllm.com/v1
