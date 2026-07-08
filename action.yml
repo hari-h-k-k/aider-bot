@@ -1,0 +1,46 @@
+name: Aider PR Review Fixer
+
+description: Automatically fixes PR review comments using aider
+
+inputs:
+  morph_api_key:
+    description: Morph API key for aider
+    required: true
+  github_token:
+    description: GitHub token with PR read/write access
+    required: true
+    default: ${{ github.token }}
+  model:
+    description: LLM model for aider to use
+    required: false
+    default: openai/morph-minimax3-428b
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run aider fix
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        AIDER_MODEL: ${{ inputs.model }}
+        OPENAI_API_KEY: ${{ inputs.morph_api_key }}
+        OPENAI_API_BASE: https://api.morphllm.com/v1
+      run: python ${{ github.action_path }}/main.py
